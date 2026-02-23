@@ -5,3 +5,11 @@ type Entry struct {
 	Url   string
 	Tags  []string
 }
+
+func (e *Entry) GetTitle() string {
+	if e.Title == "" {
+		return e.Url
+	}
+
+	return e.Title
+}
