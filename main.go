@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path"
 
@@ -84,8 +85,6 @@ func cmdEntries() *cobra.Command {
 		Aliases: []string{"e"},
 	}
 
-	cmd.Flags().String("store", "", "which store should be used")
-
 	cmd.AddCommand(cmdEntriesAdd())
 	cmd.AddCommand(cmdEntriesOpen())
 
@@ -152,11 +151,35 @@ func cmdEntriesAdd() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var selectedStore *types.LocalStore
-			if len(config.Stores) == 1 {
-				for _, store := range config.Stores {
+			var storeKey string
+
+			if len(config.Stores) > 1 {
+				key, err := cmd.Flags().GetString("store")
+				if err != nil {
+					panic(err)
+				}
+				storeKey = key
+			}
+
+			for key, store := range config.Stores {
+				if len(config.Stores) == 1 {
+					selectedStore = &store
+					break
+				}
+
+				if key == storeKey {
 					selectedStore = &store
 				}
 			}
+
+			if selectedStore == nil {
+				panic(errors.New("you need to select a store"))
+			}
+
+			if err := cmd.MarkFlagRequired("store"); err != nil {
+				panic(err)
+			}
+
 			title, err := cmd.Flags().GetString("title")
 			if err != nil {
 				return err
@@ -182,6 +205,7 @@ func cmdEntriesAdd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().String("store", "s", "which store should be used")
 	cmd.Flags().String("title", "", "title for entry")
 	cmd.Flags().StringArray("tags", []string{}, "tags for the entry")
 
